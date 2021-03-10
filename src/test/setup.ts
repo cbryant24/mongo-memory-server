@@ -1,29 +1,20 @@
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
-const mongoServer = new MongoMemoryServer();
+// May require additional time for downloading MongoDB binaries
+jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
 
-mongoose.Promise = Promise;
-mongoServer.getUri().then((mongoUri) => {
-  const mongooseOpts = {
-    // options for mongoose 4.11.3 and above
-    autoReconnect: true,
-    reconnectTries: Number.MAX_VALUE,
-    reconnectInterval: 1000,
-    useMongoClient: true, // remove this line if you use mongoose 5 and above
-  };
+let mongoServer: any;
 
-  mongoose.connect(mongoUri, mongooseOpts);
-
-  mongoose.connection.on("error", (e) => {
-    if (e.message.code === "ETIMEDOUT") {
-      console.log(e);
-      mongoose.connect(mongoUri, mongooseOpts);
-    }
-    console.log(e);
+beforeAll(async () => {
+  mongoServer = new MongoMemoryServer();
+  const mongoUri = await mongoServer.getUri();
+  await mongoose.connect(mongoUri, (err) => {
+    if (err) console.error(err);
   });
+});
 
-  mongoose.connection.once("open", () => {
-    console.log(`MongoDB successfully connected to ${mongoUri}`);
-  });
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
 });
